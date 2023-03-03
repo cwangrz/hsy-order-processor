@@ -155,59 +155,64 @@ class Address:
 		elif len(compound) == 2:
 			compound = '公园十七区'+compound
 
+		#9.normalize all 公园十七区 namings
+		compound = compound.replace('17','十七').replace('1区','北区').replace('一区','北区').replace('2区','南区').replace('二区','南区')
+
 		#8.output
 		assert compound
 		self.compound = compound
 		self.meta = meta
 
+	def __str__(self):
+		if self.compound and self.meta:
+			return self.compound + ' ' + self.meta
+		return 'None'
+
 class Items:
 	def __init__(self,raw_items):
 		self.raw_items = raw_items
-		#{item name:quantity}
-		self.quantities = {}
+		#{item:quantity}
+		self.summary = {}
 		self.entry_delimiter = '\n'
 		self.quant_delimiter = '*'
 		self.process()
 
 	def process(self,raw_items = None):
 		if not raw_items:
-			assert self.raw_items
 			raw_items = self.raw_items
 		assert raw_items
 		#raw format: '鸡蛋(30个)*1\n🇨🇱智利空运3J西梅👑(500g)*3\nxxxxxx*n\n'
 		#1. split entries by entry_delimiter -> ['鸡蛋(30个)*1','🇨🇱智利空运3J西梅👑(500g)*3','xxxxxx*n']
 		entries = raw_items.strip().split(self.entry_delimiter)
 		assert entries
-		#2. split item names and quantities by quant_delimiter -> {'鸡蛋(30个)':1,'🇨🇱智利空运3J西梅👑(500g)':3,'xxxxxx':n}
-		#   NOTE: item name might contain delimiter.   'xxxxxx(500g*5)*3'  so here is only using last occurence
+		#2. split items and quantities by quant_delimiter -> {'鸡蛋(30个)':1,'🇨🇱智利空运3J西梅👑(500g)':3,'xxxxxx':n}
+		#   NOTE: item might contain delimiter.   'xxxxxx(500g*5)*3'  so here is only using last occurence
 		for entry in entries:
 			tokens = entry.split(self.quant_delimiter)
-			item_name = self.quant_delimiter.join(tokens[0:-1]) #glue back item names that contain delimiters
-			assert item_name
-			item_quantity = int(tokens[-1])
-			assert item_quantity and item_quantity > 0
-			self.quantities[item_name] = self.quantities.get(item_name,0)+item_quantity
+			item = self.quant_delimiter.join(tokens[0:-1]) #glue back item names that contain delimiters
+			assert item
+			quantity = int(tokens[-1])
+			assert quantity and quantity > 0
+			self.summary[item] = self.summary.get(item,0)+quantity
 
 	def __str__(self):
 		return str(self.quantities)
 
+'''
 while True:
 	raw_items = input("Items:")
 	if raw_items == 'end':
 		break
 	items_obj = Items(raw_items)
 	print(items_obj)
-
 '''
-#Tester
+
 while True:
 	addr = input("Addr:")
 	print()
 	if addr == "end":
 		break
+	print('Raw Addr:',addr)
 	addr_obj = Address(addr)
-	print('Raw Addr:',addr_obj.raw_addr)
-	addr_obj.process_addr()
-	print('Clean Addr:',addr_obj.compound + " " + addr_obj.meta)
+	print('Clean Addr:',addr_obj)
 	print()
-'''
