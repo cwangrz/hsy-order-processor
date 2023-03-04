@@ -1,8 +1,8 @@
 class Order:
 	def __init__(self,wechat_id,raw_addr,raw_items):
-		this.wechat_id = wechat_id
-		this.addr = Address(raw_addr)
-		this.items = Items(raw_items)
+		self.wechat_id = wechat_id
+		self.addr = Address(raw_addr)
+		self.items = Items(raw_items)
 
 class Address:
 	def __init__(self,raw_addr):
@@ -77,7 +77,7 @@ class Address:
 			if len(tokens) > 1:
 				compound = suffix_delimiter.join(tokens[0:-1])+suffix_delimiter
 			meta = tokens[-1]
-		print('SUFFIX ROUND:',(compound,meta))
+		#print('SUFFIX ROUND:',(compound,meta))
 
 		#4.【prefix delimiters】- for meta without building/unit/room info such as '菜鸟驿站'
 		'''
@@ -105,7 +105,7 @@ class Address:
 				compound = tokens[0] #might overwrite result from previous attempt. but should be ok..?
 				meta = prefix_delimiter+" "+tokens[-1]
 				break
-		print('PREFIX ROUND:',(compound,meta))
+		#print('PREFIX ROUND:',(compound,meta))
 
 		#5.【chinese to arabic numeral】
 		chinese_nums = ["二十","十九","十八","十七","十六","十五","十四","十三","十二","十一","十","九","八","七","六","五","四","三","二","一"]
@@ -135,7 +135,7 @@ class Address:
 					compound = meta[0:i]
 					meta = meta[i:]
 					break
-			print('FINAL ROUND:',(compound,meta))
+			#print('FINAL ROUND:',(compound,meta))
 
 		#7. clean up meta so that we only keep essential info
 		assert meta
@@ -177,13 +177,11 @@ class Items:
 		self.quant_delimiter = '*'
 		self.process()
 
-	def process(self,raw_items = None):
-		if not raw_items:
-			raw_items = self.raw_items
-		assert raw_items
+	def process(self):
+		assert self.raw_items
 		#raw format: '鸡蛋(30个)*1\n🇨🇱智利空运3J西梅👑(500g)*3\nxxxxxx*n\n'
 		#1. split entries by entry_delimiter -> ['鸡蛋(30个)*1','🇨🇱智利空运3J西梅👑(500g)*3','xxxxxx*n']
-		entries = raw_items.strip().split(self.entry_delimiter)
+		entries = self.raw_items.strip().split(self.entry_delimiter)
 		assert entries
 		#2. split items and quantities by quant_delimiter -> {'鸡蛋(30个)':1,'🇨🇱智利空运3J西梅👑(500g)':3,'xxxxxx':n}
 		#   NOTE: item might contain delimiter.   'xxxxxx(500g*5)*3'  so here is only using last occurence
@@ -196,7 +194,32 @@ class Items:
 			self.summary[item] = self.summary.get(item,0)+quantity
 
 	def __str__(self):
-		return str(self.quantities)
+		return str(self.summary)
+
+class Stats:
+	def __init__(self):
+		self.by_compound = {}
+		self.by_customer = {}
+		self.by_item = {}
+
+	def process(self,order):
+		compound = order.addr.compound
+		meta = order.addr.meta
+		wechat_id = order.wechat_id
+		items = order.items
+
+		self.by_compound.setdefault(compound,{}).setdefault(meta,{}).update(items.summary)
+
+	def __str__(self):
+		o = ''
+		for compound in self.by_compound.keys():
+			o += compound + '\n'
+			o += '----------------\n'
+			for meta in self.by_compound[compound]:
+				o += meta+':'+str(self.by_compound[compound][meta])+'\n'
+				#self.by_compound[compound][meta] = str(self.by_compound[compound][meta])
+			o += '\n'
+		return o
 
 '''
 while True:
@@ -206,7 +229,7 @@ while True:
 	items_obj = Items(raw_items)
 	print(items_obj)
 '''
-
+'''
 while True:
 	addr = input("Addr:")
 	print()
@@ -215,4 +238,17 @@ while True:
 	print('Raw Addr:',addr)
 	addr_obj = Address(addr)
 	print('Clean Addr:',addr_obj)
-	print()
+	print()'''
+
+order1 = Order('小宇💕[社会社会]','顺义区金地悦景台7号楼1单元806','葡萄柚(一箱)*1\n即食猕猴桃(一箱)*1\n')
+order2 = Order('🍭Ms.S🍭','北京市顺义区后沙峪镇公园十七区南区一号楼三单元1202室','树熟贵妃芒🥭(500g)*1\n猫山王D197榴莲果肉无核(2盒)*1\n挖土豆🥔(210g)*2\n')
+order3 = Order('August·崔','公园十七区南区6-1-702','挖土豆🥔(210g)*2\n')
+order4 = Order('🍭Ms.S🍭','后沙峪国门智慧城8号楼518','葡萄柚(一箱)*1\n即食猕猴桃(一箱)*1\n')
+order5 = Order('August·崔','公园十七区南区6-1-702','二次下单*1\n')
+stats = Stats()
+stats.process(order1)
+stats.process(order2)
+stats.process(order3)
+stats.process(order4)
+stats.process(order5)
+print(stats)
