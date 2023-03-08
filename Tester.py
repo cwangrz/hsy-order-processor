@@ -4,6 +4,8 @@ class Order:
 		self.addr = Address(raw_addr)
 		self.items = Items(raw_items)
 
+
+
 class Address:
 	def __init__(self,raw_addr):
 		self.raw_addr = raw_addr
@@ -156,6 +158,10 @@ class Address:
 			compound = '公园十七区'+compound
 
 		#9.normalize all 公园十七区 namings
+		if compound[0:2] == '17':
+			compound = compound.replace('17区','公园十七区')
+		if compound[0:2] == '十七':
+			compound = compound.replace('十七区','公园十七区')
 		compound = compound.replace('17','十七').replace('1区','北区').replace('一区','北区').replace('2区','南区').replace('二区','南区')
 
 		#8.output
@@ -175,9 +181,9 @@ class Items:
 		self.summary = {}
 		self.entry_delimiter = '\n'
 		self.quant_delimiter = '*'
-		self.process()
+		self.process_items()
 
-	def process(self):
+	def process_items(self):
 		assert self.raw_items
 		#raw format: '鸡蛋(30个)*1\n🇨🇱智利空运3J西梅👑(500g)*3\nxxxxxx*n\n'
 		#1. split entries by entry_delimiter -> ['鸡蛋(30个)*1','🇨🇱智利空运3J西梅👑(500g)*3','xxxxxx*n']
@@ -190,7 +196,7 @@ class Items:
 			item = self.quant_delimiter.join(tokens[0:-1]) #glue back item names that contain delimiters
 			assert item
 			quantity = int(tokens[-1])
-			assert quantity and quantity > 0
+			assert quantity > 0
 			self.summary[item] = self.summary.get(item,0)+quantity
 
 	def __str__(self):
@@ -202,7 +208,7 @@ class Stats:
 		self.by_customer = {}
 		self.by_item = {}
 
-	def process(self,order):
+	def process_stats(self,order):
 		compound = order.addr.compound
 		meta = order.addr.meta
 		wechat_id = order.wechat_id
@@ -216,10 +222,15 @@ class Stats:
 			o += compound + '\n'
 			o += '----------------\n'
 			for meta in self.by_compound[compound]:
-				o += meta+':'+str(self.by_compound[compound][meta])+'\n'
+				o += meta.ljust(20)+':'+str(self.by_compound[compound][meta])+'\n'
 				#self.by_compound[compound][meta] = str(self.by_compound[compound][meta])
 			o += '\n'
 		return o
+
+import pandas as pd
+path = 'sheets/test.xls'
+orders = pd.read_excel(path)
+orders.dropna(inplace=True)
 
 '''
 while True:
@@ -240,15 +251,15 @@ while True:
 	print('Clean Addr:',addr_obj)
 	print()'''
 
+stats = Stats()
+for i in range(len(orders)):
+	order = Order(orders['微信昵称'][i],orders['收货地址'][i],orders['商品合计'][i])
+	stats.process_stats(order)
+'''
 order1 = Order('小宇💕[社会社会]','顺义区金地悦景台7号楼1单元806','葡萄柚(一箱)*1\n即食猕猴桃(一箱)*1\n')
 order2 = Order('🍭Ms.S🍭','北京市顺义区后沙峪镇公园十七区南区一号楼三单元1202室','树熟贵妃芒🥭(500g)*1\n猫山王D197榴莲果肉无核(2盒)*1\n挖土豆🥔(210g)*2\n')
 order3 = Order('August·崔','公园十七区南区6-1-702','挖土豆🥔(210g)*2\n')
 order4 = Order('🍭Ms.S🍭','后沙峪国门智慧城8号楼518','葡萄柚(一箱)*1\n即食猕猴桃(一箱)*1\n')
 order5 = Order('August·崔','公园十七区南区6-1-702','二次下单*1\n')
-stats = Stats()
-stats.process(order1)
-stats.process(order2)
-stats.process(order3)
-stats.process(order4)
-stats.process(order5)
+'''
 print(stats)
