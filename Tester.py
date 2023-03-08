@@ -4,11 +4,10 @@ class Order:
 		self.addr = Address(raw_addr)
 		self.items = Items(raw_items)
 
-
-
 class Address:
 	def __init__(self,raw_addr):
 		self.raw_addr = raw_addr
+		self.raw_min_len = 5
 		self.compound = None
 		self.meta = None
 		#long forms must come before short hand: [北京市, 北京]
@@ -21,8 +20,9 @@ class Address:
 
 	def process_addr(self):
 		import re
-		assert self.raw_addr
-		#1.【general filters】- state, city, town, street names and 
+		self.error_check()
+
+		#1.【general filters】- state, city, town, street names and symbols
 		temp = self.raw_addr.strip()
 		for f in self.general_filters:
 			temp = temp.replace(f, '')
@@ -35,42 +35,6 @@ class Address:
 		temp = re.sub(' +',' ',temp)
 		
 		#4.【suffix delimiters】- for compound names including numerals or 南区/北区
-		'''
-			1.艾迪城菜鸟驿站 晨呐18511342908
-				compound = ''
-				meta = '艾迪城菜鸟驿站 晨呐18511342908'
-
-			2.空港工业区B区三山新新家园菜鸟驿站
-				compound = '空港工业区B区'
-				meta = '三山新新家园菜鸟驿站'
-
-			3.空港工业区B区三山新新家园十一号楼七单元501
-				compound = '空港工业区B区'
-				meta = '三山新新家园十一号楼七单元501'
-
-			4.公园十七区北区1 1 401
-				compound = '公园十七区北区'
-				meta = '1 1 401'
-
-			5.古城东大街12 2 电话:18311426087
-				compound = ''
-				meta = '古城东大街12 2 电话:18311426087'
-
-			1.compound = ''   meta = '艾迪城菜鸟驿站 晨呐18511342908'
-				compound = ''   meta = '艾迪城菜鸟驿站 晨呐18511342908'
-
-			2.compound = '空港工业区B区'  meta = '三山新新家园菜鸟驿站'
-				compound = '三山新新家园'   meta = '菜鸟驿站'
-
-			3.compound = '空港工业区B区'  meta = '三山新新家园十一号楼七单元501'
-				compound = '三山新新家园'  meta = '十一号楼七单元501'
-
-			4.compound = '公园十七区北区'  meta = '1 1 401'
-				compound = '公园十七区北区'  meta = '1 1 401'
-
-			5.compound = ''   meta = '古城东大街12.2 电话:18311426087'
-				compound = ''   meta = '古城东大街12 2 电话:18311426087'
-		'''
 		compound = None
 		meta = temp
 		for (suffix_delimiter,bound) in self.suffix_delimiters.items():
@@ -81,23 +45,7 @@ class Address:
 			meta = tokens[-1]
 		#print('SUFFIX ROUND:',(compound,meta))
 
-		#4.【prefix delimiters】- for meta without building/unit/room info such as '菜鸟驿站'
-		'''
-			1.compound = ''        meta = '艾迪城菜鸟驿站 晨呐18511342908'
-				compound = '艾迪城'   meta = '菜鸟驿站 晨呐18511342908'
-
-			2.compound = '空港工业区B区'  meta = '三山新新家园菜鸟驿站'
-				compound = '三山新新家园'   meta = '菜鸟驿站'
-
-			3.compound = '三山新新家园'  meta = '十一号楼七单元501'
-				compound = '三山新新家园'  meta = '十一号楼七单元501'
-
-			4.compound = '公园十七区北区'  meta = '1 1 401'
-				compound = '公园十七区北区'  meta = '1 1 401'
-
-			5.compound = ''   meta = '古城东大街12 2 电话:18311426087'
-				compound = ''   meta = '古城东大街12 2 电话:18311426087'
-		'''
+		#5.【prefix delimiters】- for meta without building/unit/room info such as '菜鸟驿站'
 		for prefix_delimiter in self.prefix_delimiters:
 			if meta == prefix_delimiter: #if meta is only left with delimiter itself, then skip
 				break
@@ -109,28 +57,12 @@ class Address:
 				break
 		#print('PREFIX ROUND:',(compound,meta))
 
-		#5.【chinese to arabic numeral】
+		#6.【chinese to arabic numeral】
 		chinese_nums = ["二十","十九","十八","十七","十六","十五","十四","十三","十二","十一","十","九","八","七","六","五","四","三","二","一"]
 		for cn in chinese_nums:
 			meta = meta.replace(cn,str(20-chinese_nums.index(cn)))
 
-		#6.【last resort】uses first numeric char as delimiter 
-		'''
-			1.compound = '艾迪城'   meta = '菜鸟驿站 晨呐18511342908'
-				compound = '艾迪城'   meta = '菜鸟驿站 晨呐18511342908'
-				
-			2.compound = '三山新新家园'   meta = '菜鸟驿站'
-				compound = '三山新新家园'   meta = '菜鸟驿站'
-
-			3.compound = '三山新新家园'  meta = '十一号楼七单元501'
-				compound = '三山新新家园'  meta = '十一号楼七单元501'
-
-			4.compound = '公园十七区北区'  meta = '1 1 401'
-				compound = '公园十七区北区'  meta = '1 1 401'
-
-			5.compound = ''           meta = '古城东大街12 2 电话:18311426087'
-				compound = '古城东大街'   meta = '12 2 电话:18311426087'
-		'''
+		#7.【last resort】uses first numeric char as delimiter 
 		if not compound:
 			for i in range(len(meta)):
 				if meta[i].isnumeric():
@@ -139,7 +71,7 @@ class Address:
 					break
 			#print('FINAL ROUND:',(compound,meta))
 
-		#7. clean up meta so that we only keep essential info
+		#8. clean up meta so that we only keep essential info
 		assert meta
 		exclude_str = '^0123456789'
 		#Have to keep all prefix delimiters
@@ -151,23 +83,34 @@ class Address:
 		if clean_meta != '': #if clean_meta is empty then we should probably keep the original shit that was in there.
 			meta = clean_meta
 
-		#8.fill in legacy 公园十七区 orders. '北7 1 1' -> '公园十七区北区 7 1 1'
-		if len(compound) == 1:
+		#9.fill in legacy 公园十七区 orders. '北7 1 1' -> '公园十七区北区 7 1 1'
+		if len(compound) == 0: #**********************************temporary fix**********************************
+			compound = '公园十七区北区'
+		elif len(compound) == 1:
 			compound = '公园十七区'+compound+'区'
 		elif len(compound) == 2:
 			compound = '公园十七区'+compound
 
-		#9.normalize all 公园十七区 namings
+		#10.normalize all 公园十七区 namings
 		if compound[0:2] == '17':
 			compound = compound.replace('17区','公园十七区')
 		if compound[0:2] == '十七':
 			compound = compound.replace('十七区','公园十七区')
-		compound = compound.replace('17','十七').replace('1区','北区').replace('一区','北区').replace('2区','南区').replace('二区','南区')
+		compound = compound.replace('公元十七区','公园十七区').replace('公元17区','公园十七区').replace('17','十七').replace('1区','北区').replace('一区','北区').replace('2区','南区').replace('二区','南区')
 
-		#8.output
+		#11.output
 		assert compound
-		self.compound = compound
-		self.meta = meta
+		self.compound = compound.strip()
+		self.meta = meta.strip()
+
+	def error_check(self):
+		assert self.raw_addr
+		if len(self.raw_addr) < self.raw_min_len:
+			print('请检查以下地址:')
+			print(self.raw_addr)
+			choice = input('1.无误  2.手动输入   ')
+			if choice == '2':
+				self.raw_addr = input('收货地址: ')
 
 	def __str__(self):
 		if self.compound and self.meta:
@@ -207,14 +150,37 @@ class Stats:
 		self.by_compound = {}
 		self.by_customer = {}
 		self.by_item = {}
+		self.items_header = '商品合计'
+		self.raw_addr_header = '备用地址'
+		self.wechat_header = '微信昵称'
 
 	def process_stats(self,order):
+		raw_addr = order.addr.raw_addr
 		compound = order.addr.compound
 		meta = order.addr.meta
 		wechat_id = order.wechat_id
 		items = order.items
+		self.by_compound.setdefault(compound,{}).setdefault(meta,{}).setdefault(self.items_header,{}).update(items.summary) #update items
+		self.by_compound[compound][meta][self.raw_addr_header] = raw_addr #update raw address
+		self.by_compound[compound][meta][self.wechat_header] = wechat_id
 
-		self.by_compound.setdefault(compound,{}).setdefault(meta,{}).update(items.summary)
+	def get_compounds(self):
+		compounds =  tuple(self.by_compound.keys())
+		return compounds
+
+	def get_columns(self,compound):
+		rows = self.by_compound[compound]
+		metas = tuple(' - '.join(meta.split(' ')) for meta in rows.keys())
+		items = tuple(self.serialize_items(conglom[self.items_header]) for conglom in rows.values())
+		raw_addrs = tuple(conglom[self.raw_addr_header] for conglom in rows.values())
+		wechat_ids = tuple(conglom[self.wechat_header] for conglom in rows.values())
+		return metas,items,raw_addrs,wechat_ids
+
+	def serialize_items(self,item_dict):
+		item_strs = ''
+		for item,quantity in item_dict.items():
+			item_strs += item + ' x ' + str(quantity) + '\n'
+		return item_strs.strip()
 
 	def __str__(self):
 		o = ''
@@ -222,44 +188,30 @@ class Stats:
 			o += compound + '\n'
 			o += '----------------\n'
 			for meta in self.by_compound[compound]:
-				o += meta.ljust(20)+':'+str(self.by_compound[compound][meta])+'\n'
-				#self.by_compound[compound][meta] = str(self.by_compound[compound][meta])
+				o += meta.ljust(20)+':'+str(self.by_compound[compound][meta]['商品合计'])+', '+str(self.by_compound[compound][meta]['备用地址'])+'\n'
 			o += '\n'
 		return o
 
 import pandas as pd
-path = 'sheets/test.xls'
-orders = pd.read_excel(path)
-orders.dropna(inplace=True)
-
-'''
-while True:
-	raw_items = input("Items:")
-	if raw_items == 'end':
-		break
-	items_obj = Items(raw_items)
-	print(items_obj)
-'''
-'''
-while True:
-	addr = input("Addr:")
-	print()
-	if addr == "end":
-		break
-	print('Raw Addr:',addr)
-	addr_obj = Address(addr)
-	print('Clean Addr:',addr_obj)
-	print()'''
+from os import listdir
 
 stats = Stats()
-for i in range(len(orders)):
-	order = Order(orders['微信昵称'][i],orders['收货地址'][i],orders['商品合计'][i])
-	stats.process_stats(order)
-'''
-order1 = Order('小宇💕[社会社会]','顺义区金地悦景台7号楼1单元806','葡萄柚(一箱)*1\n即食猕猴桃(一箱)*1\n')
-order2 = Order('🍭Ms.S🍭','北京市顺义区后沙峪镇公园十七区南区一号楼三单元1202室','树熟贵妃芒🥭(500g)*1\n猫山王D197榴莲果肉无核(2盒)*1\n挖土豆🥔(210g)*2\n')
-order3 = Order('August·崔','公园十七区南区6-1-702','挖土豆🥔(210g)*2\n')
-order4 = Order('🍭Ms.S🍭','后沙峪国门智慧城8号楼518','葡萄柚(一箱)*1\n即食猕猴桃(一箱)*1\n')
-order5 = Order('August·崔','公园十七区南区6-1-702','二次下单*1\n')
-'''
-print(stats)
+sheets = listdir('sheets')
+for sheet in sheets:
+	orders = pd.read_excel('sheets/'+sheet)
+	orders.dropna(inplace=True)
+	for r in range(len(orders)):
+		order = Order(str(orders['微信昵称'][r]),str(orders['收货地址'][r]),str(orders['商品合计'][r]))
+		stats.process_stats(order)
+
+with pd.ExcelWriter('output.xlsx') as writer:
+	for compound in stats.get_compounds():
+		metas,items,raw_addrs,wechat_ids = stats.get_columns(compound)
+		df = pd.DataFrame(list(zip(metas,items,raw_addrs,wechat_ids)),columns=['收货地址','商品合计','备用地址','微信昵称'])
+		df.to_excel(writer, sheet_name = compound,index=False)
+
+	workbook = writer.book
+	formats = workbook.add_format({'text_wrap':True,'align':'center','valign':'vcenter'})
+	for worksheet in writer.sheets:
+		writer.sheets[worksheet].set_column('A:D', 50, formats)
+writer.close()
