@@ -16,7 +16,7 @@ class IO:
 		self.workbooks = listdir(WORKBOOK_FOLDER)
 		self.orders_df = pd.DataFrame()
 		for workbook in self.workbooks:
-			df = pd.read_excel(f'{WORKBOOK_FOLDER}/{workbook}')
+			df = pd.read_excel(f'{WORKBOOK_FOLDER}/{workbook}',usecols = [RAW_ADDR_HEADER,WECHAT_HEADER,ITEMS_HEADER])
 			df.dropna(inplace=True)
 			self.orders_df = pd.concat([self.orders_df,df],ignore_index=True)
 

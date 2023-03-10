@@ -81,6 +81,7 @@ class Address:
 		if clean_meta != '': #if clean_meta is empty then we should probably keep the original shit that was in there.
 			meta = clean_meta
 
+		compound = compound.strip()
 		#9.fill in legacy 公园十七区 orders. '北7 1 1' -> '公园十七区北区 7 1 1'
 		if len(compound) == 0:
 			if self.error_check():

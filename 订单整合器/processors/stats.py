@@ -17,7 +17,7 @@ class Stats:
 			if compound not in self.by_compound:
 				self.compound_count += 1
 			self.by_compound.setdefault(compound,{}).setdefault(meta,{}).setdefault(ITEMS_HEADER,{}).update(items.summary) #update items
-			if raw_addr not in self.by_compound[compound][meta]:
+			if RAW_ADDR_HEADER not in self.by_compound[compound][meta]:
 				self.order_combined_count += 1
 			self.by_compound[compound][meta][RAW_ADDR_HEADER] = raw_addr #update raw address
 			self.by_compound[compound][meta][WECHAT_HEADER] = wechat_id
