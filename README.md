@@ -22,6 +22,9 @@ Main
 6. output excel and then
 7. add formats
 
-# TO DO:
+# TO DO
 1. Gather more useful stats during processing
 2. Implement persistant stats
+
+# KNOWN BUG
+1. 17区北4-4-1001 will result in 公园十七区 as compound name. some modification to 'last resort' should be able to fix this
